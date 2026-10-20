@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gapline — AI conversion diagnostics for European markets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0B0C; --bg2:#0F1112; --card:#141617; --sunk:#0D0F10; --line:#222628; --line2:#1A1D1F;
+  --ink:#F3F5F5; --ink2:#C4CACC; --mu:#868E92; --dim:#5A6266;
+  --cy:#1FD3E3; --cyS:rgba(31,211,227,.12); --em:#1FD3E3; --emS:rgba(31,211,227,.12);
+  --st:#FF5D6A; --stS:rgba(255,93,106,.13); --mi:#F4B542; --miS:rgba(244,181,66,.13);
+  --cv:#3EE39B; --cvS:rgba(62,227,155,.12); --ot:#8A949A; --otS:rgba(138,148,154,.14);
+  --disp:"Syne","Manrope",system-ui,sans-serif; --sans:"Manrope","Segoe UI",system-ui,-apple-system,Arial,sans-serif; --mono:var(--sans);
+  --r:14px; color-scheme:dark;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(10,11,12,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:40px;padding:0 40px;height:68px}
+.brand{font-family:var(--disp);font-size:22px;font-weight:700;letter-spacing:-.01em}
+.brand i{font-style:normal;color:var(--cy)}
+.tabs{display:flex;gap:30px;height:100%}
+.tab{border:0;background:none;color:var(--mu);font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;position:relative;transition:color .15s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--cy)}
+.tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--cy);box-shadow:0 0 12px var(--cy)}
+.tab:focus-visible{outline:2px solid var(--cy);outline-offset:4px;border-radius:4px}
+.sp{flex:1}
+.src{font-size:11px;color:var(--dim);text-align:right;line-height:1.5}
+
+/* layout */
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:36px;padding:36px 40px 0;max-width:1480px;margin:0 auto}
+.side{position:sticky;top:104px;align-self:start;max-height:calc(100vh - 128px);display:flex;flex-direction:column}
+.lbl{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);font-weight:700}
+.side .lbl{margin:0 4px 12px}
+.search{width:100%;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:10px 16px;margin-bottom:10px;outline:none;transition:border-color .15s,box-shadow .15s}
+.search::placeholder{color:var(--dim)}
+.search:focus{border-color:var(--cy);box-shadow:0 0 0 3px var(--cyS)}
+.list{overflow:auto;display:flex;flex-direction:column;gap:2px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.item{display:flex;align-items:center;gap:11px;padding:8px 14px;border-radius:999px;cursor:pointer;transition:background .12s;border:0;background:none;text-align:left;width:100%}
+.item:hover{background:var(--card)}
+.item.on{background:var(--cyS);color:var(--cy)}
+.item.on .gp{color:var(--cy)}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.item .nm{flex:1;font-weight:600;font-size:13.5px}
+.item .gp{font-size:11.5px;color:var(--mu);font-variant-numeric:tabular-nums}
+.legend{margin-top:16px;padding:16px 4px 0;border-top:1px solid var(--line2);display:grid;gap:8px;font-size:12px;color:var(--mu)}
+.legend span{display:flex;align-items:center;gap:10px}
+
+/* section headings — centred, display face */
+.sec{margin-top:72px}
+.sech{text-align:center;margin-bottom:28px}
+.sech .n{display:block;font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--cy);margin-bottom:8px}
+.sech h3{font-family:var(--disp);font-size:30px;font-weight:700;letter-spacing:-.015em;line-height:1.15}
+.sech p{font-size:13.5px;color:var(--mu);max-width:520px;margin:8px auto 0}
+.card{background:var(--card);border:1px solid var(--line2);border-radius:var(--r);padding:24px 26px}
+.card h4{font-family:var(--disp);font-size:16px;font-weight:700;margin-bottom:4px}
+.card .sub{font-size:12.5px;color:var(--mu);margin-bottom:18px}
+.g2{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
+.g2e{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.note{margin-top:14px;font-size:12px;color:var(--mu)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px}
+.hmain{position:relative;overflow:hidden;background:radial-gradient(120% 140% at 100% 0%,rgba(31,211,227,.07),transparent 55%),var(--card);border:1px solid var(--line2);border-radius:var(--r);padding:34px 36px}
+.tag{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--hc);padding:6px 14px;border-radius:999px;border:1px solid var(--hc);background:var(--hs)}
+.hmain h2{font-family:var(--disp);font-size:36px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:20px 0 14px;max-width:720px;text-wrap:balance}
+.hmain p{color:var(--ink2);font-size:15px;max-width:640px}
+.alt h4{margin-bottom:4px}
+.ar{margin-bottom:16px}
+.ar .t{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px}
+.ar .t span:first-child{font-weight:600}
+.bar{height:5px;background:var(--line2);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;transition:width .4s ease}
+
+/* kpi feature strip */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);margin-top:18px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.kpi{padding:26px 16px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.kpi+.kpi{border-left:1px solid var(--line2)}
+.kpi svg{width:26px;height:26px;stroke:var(--cy);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:10px}
+.kpi b{display:block;font-family:var(--disp);font-size:28px;font-weight:700;letter-spacing:-.02em;margin:4px 0 2px;color:var(--kc,var(--ink));font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--mu)}
+
+/* reliability */
+.rel{display:grid;grid-template-columns:280px minmax(0,1fr);gap:0;padding:0;overflow:hidden}
+.score{padding:30px 28px;border-right:1px solid var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(90% 70% at 50% 40%,var(--gl),transparent 70%)}
+.ring{position:relative;width:150px;height:150px;margin:14px 0 16px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--disp);font-size:46px;font-weight:700;letter-spacing:-.03em}
+.ring b small{display:block;font-family:var(--sans);font-size:11px;font-weight:600;color:var(--mu);letter-spacing:.1em;margin-top:-6px}
+.lvl{display:inline-flex;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:6px 14px;border-radius:999px}
+.cstatus{margin-top:16px;font-size:12px;color:var(--mu);line-height:1.5}
+.checks{display:flex;flex-direction:column}
+.ck{display:grid;grid-template-columns:30px minmax(0,1fr) 120px;gap:16px;align-items:center;padding:17px 26px;border-bottom:1px solid var(--line2)}
+.ck:last-child{border-bottom:0}
+.ck .ic{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800}
+.ck .nm{min-width:0}
+.ck .nm strong{display:block;font-size:13.5px;font-weight:700}
+.ck .nm span{display:block;font-size:12.5px;color:var(--mu);overflow-wrap:anywhere}
+.ck .pt{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.ck .pt em{font-style:normal;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.ck .pt .bar{width:100%}
+
+/* evidence table */
+.ev{width:100%;border-collapse:collapse;font-size:13px}
+.ev th{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;text-align:left;padding:0 10px 12px;border-bottom:1px solid var(--line)}
+.ev td{padding:12px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.ev tr:last-child td{border-bottom:0}
+.ev td:nth-child(2){font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ev td small{display:block;color:var(--mu);font-size:11.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap}
+
+/* steps */
+.steps{display:grid;gap:16px}
+.step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;font-size:13.5px;color:var(--ink2);align-items:start}
+.step i{font-style:normal;font-size:12px;font-weight:800;color:var(--bg);background:var(--cy);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;box-shadow:0 0 16px rgba(31,211,227,.35)}
+.qs{list-style:none;display:grid;gap:12px}
+.qs li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:14px;font-size:13.5px;color:var(--ink2);align-items:start}
+.qs li::before{content:"?";width:30px;height:30px;border-radius:50%;border:1px solid var(--cy);color:var(--cy);display:grid;place-items:center;font-weight:800;font-size:13px}
+.warn{margin-top:18px;padding:13px 16px;border-radius:12px;background:var(--miS);color:var(--ink2);font-size:12.5px;border:1px solid rgba(244,181,66,.3)}
+.foot{margin-top:48px;font-size:12px;color:var(--dim);text-align:center;max-width:640px;margin-left:auto;margin-right:auto}
+.giant{font-family:var(--disp);font-weight:800;font-size:clamp(40px,9.6vw,160px);line-height:.8;letter-spacing:-.03em;text-align:center;color:transparent;-webkit-text-stroke:1.5px rgba(31,211,227,.55);margin:56px 0 0;padding-bottom:24px;user-select:none;white-space:nowrap;overflow:hidden;opacity:.8}
+
+/* ranking */
+.tw{overflow-x:auto;padding:8px 10px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;text-align:right;padding:14px 12px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+.tbl th:hover{color:var(--cy)}
+.tbl th:nth-child(-n+2),.tbl th:last-child{text-align:left}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--line2);text-align:right;font-variant-numeric:tabular-nums}
+.tbl td:first-child{color:var(--dim);text-align:left;width:34px}
+.tbl td:nth-child(2){text-align:left;font-weight:700}
+.tbl td:last-child{text-align:left}
+.tbl tr.row{cursor:pointer;transition:background .1s}
+.tbl tr.row:hover td{background:rgba(31,211,227,.05)}
+.gb{display:inline-block;height:5px;border-radius:999px;vertical-align:middle;margin-left:8px}
+
+/* method */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mgrid h4{margin-bottom:12px}
+.mgrid p,.mgrid li{color:var(--ink2);font-size:13.5px}
+.mgrid p+p{margin-top:10px}
+.mgrid ul{padding-left:18px;display:grid;gap:6px}
+.mgrid li::marker{color:var(--cy)}
+.rule{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2);font-size:13px}
+.rule b{font-size:12px;color:var(--cy);font-weight:800}
+.wt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;font-size:13px;margin-top:12px}
+.wt span:nth-child(even){font-weight:800;color:var(--cy)}
+main,.card,.hmain{min-width:0}
+.ev{display:block;overflow-x:auto}
+.hide{display:none!important}
+@media(max-width:1180px){.rel{grid-template-columns:1fr}.score{border-right:0;border-bottom:1px solid var(--line2)}}
+@media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr);padding:22px 16px 0}.side{position:static;max-height:none}.list{max-height:200px}.hero,.g2,.g2e,.mgrid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.kpi:nth-child(3){border-left:0}.kpi:nth-child(n+3){border-top:1px solid var(--line2)}.src{display:none}.top{padding:0 16px;gap:18px}.tabs{gap:16px}.hmain h2{font-size:28px}.sech h3{font-size:24px}.ck{grid-template-columns:28px minmax(0,1fr);padding:14px 18px}.ck .pt{grid-column:2;align-items:flex-start}.ck .pt .bar{width:120px}.giant{margin:40px -16px 0}}
+/* ===== landing ===== */
+#landing{position:relative}
+.lnav{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:72px;transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+.lnav.solid{background:rgba(10,11,12,.85);backdrop-filter:blur(10px);border-color:var(--line2)}
+.btn{display:inline-flex;align-items:center;gap:10px;border:0;cursor:pointer;background:var(--cy);color:#041416;font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;padding:15px 28px;border-radius:999px;box-shadow:0 0 28px rgba(31,211,227,.35);transition:transform .15s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 40px rgba(31,211,227,.55)}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--cy);color:var(--cy)}
+.btn.sm{padding:10px 18px;font-size:11.5px}
+.lhero{min-height:100vh;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 90px;position:relative;overflow:hidden}
+.lglow{position:absolute;width:900px;height:900px;left:50%;top:44%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(31,211,227,.13),transparent 62%);pointer-events:none}
+.lgrid{position:absolute;inset:0;background-image:linear-gradient(var(--line2) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse at 50% 45%,#000 10%,transparent 70%);-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 10%,transparent 70%);opacity:.6;pointer-events:none}
+.eyebrow{position:relative;font-size:11.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--cy);border:1px solid rgba(31,211,227,.35);padding:7px 16px;border-radius:999px;background:var(--cyS)}
+.lwm{position:relative;font-family:var(--disp);font-weight:800;font-size:clamp(64px,13vw,190px);letter-spacing:-.04em;line-height:.95;margin:26px 0 22px}
+.lwm i{font-style:normal;color:var(--cy);text-shadow:0 0 30px rgba(31,211,227,.6)}
+.ltag{position:relative;max-width:640px;font-size:clamp(15px,1.6vw,18px);color:var(--ink2);line-height:1.6}
+.lcta{position:relative;display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:34px}
+.lstats{position:relative;display:flex;gap:56px;margin-top:64px}
+.lstats b{display:block;font-family:var(--disp);font-size:26px;font-weight:700}
+.lstats span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);font-weight:700}
+.scrollhint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:10px}
+.scrollhint i{width:1px;height:38px;background:linear-gradient(var(--cy),transparent);animation:drip 1.8s ease-in-out infinite}
+@keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* scroll scene */
+.scene{height:420vh;position:relative}
+.stick{position:sticky;top:0;height:100vh;height:100svh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:48px;align-items:center;padding:90px 56px 40px;max-width:1440px;margin:0 auto}
+.sk{font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--cy);text-transform:uppercase}
+.stitle{font-family:var(--disp);font-size:clamp(28px,3.4vw,46px);font-weight:700;letter-spacing:-.02em;line-height:1.08;margin:12px 0 30px}
+.sstep{display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;padding:16px 0;border-top:1px solid var(--line2);opacity:.32;transition:opacity .35s}
+.sstep.on{opacity:1}
+.sstep b{font-family:var(--disp);font-size:15px;color:var(--cy)}
+.sstep h5{font-size:16px;font-weight:700;margin-bottom:2px}
+.sstep p{font-size:13.5px;color:var(--mu)}
+.sbar{height:2px;background:var(--line2);border-radius:2px;margin-top:22px;overflow:hidden}
+.sbar i{display:block;height:100%;width:0;background:var(--cy);box-shadow:0 0 10px var(--cy)}
+.schart{position:relative;background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:22px 22px 14px}
+.schart svg{display:block;width:100%;height:auto}
+.gapread{position:absolute;top:22px;right:24px;text-align:right}
+.gapread span{display:block;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu)}
+.gapread b{display:block;font-family:var(--disp);font-size:clamp(34px,4vw,54px);font-weight:700;letter-spacing:-.03em;color:var(--st);line-height:1.05;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(255,93,106,.35)}
+.gapread small{font-size:12.5px;color:var(--ink2);font-weight:600}
+
+/* classes */
+.lsec{padding:120px 40px;max-width:1240px;margin:0 auto}
+.lsec .sech{margin-bottom:44px}
+.lcls{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.lc{background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:26px 22px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s}
+.lc:hover{transform:translateY(-4px);border-color:var(--c)}
+.lc::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--c);box-shadow:0 0 18px var(--c)}
+.lc .k{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--c)}
+.lc h4{font-family:var(--disp);font-size:19px;font-weight:700;margin:10px 0 8px;line-height:1.2}
+.lc p{font-size:13px;color:var(--mu)}
+.lc .cnt{margin-top:18px;font-size:12px;color:var(--ink2);font-weight:700}
+
+/* finale */
+.lend{padding:40px 24px 90px;text-align:center;overflow:hidden}
+.fillwm{font-family:var(--disp);font-weight:800;font-size:clamp(52px,12.5vw,200px);letter-spacing:-.04em;line-height:.9;color:transparent;-webkit-text-stroke:1.5px rgba(31,211,227,.6);background:linear-gradient(90deg,var(--cy) var(--f,0%),transparent var(--f,0%));-webkit-background-clip:text;background-clip:text;user-select:none}
+.lend p{color:var(--mu);margin:28px auto 30px;max-width:520px}
+
+/* page transitions */
+.fadeout{animation:fo .45s ease forwards}
+.fadein{animation:fi .55s ease both}
+@keyframes fo{to{opacity:0;transform:translateY(-24px)}}
+@keyframes fi{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+/* ===== dashboard about bar ===== */
+.top .brand{cursor:pointer}
+.about{border-bottom:1px solid var(--line2);background:linear-gradient(90deg,rgba(31,211,227,.09),rgba(31,211,227,.02) 45%,transparent),var(--bg2);position:relative}
+.about::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cy);box-shadow:0 0 16px var(--cy)}
+.about-in{max-width:1480px;margin:0 auto;padding:26px 40px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1.6fr);gap:40px;align-items:center}
+.about .sk{display:block;margin-bottom:8px}
+.about h2{font-family:var(--disp);font-size:clamp(19px,1.8vw,24px);font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.about h2 em{font-style:normal;color:var(--cy)}
+.about-u{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.about-u>div{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start}
+.about-u svg{width:34px;height:34px;padding:7px;border-radius:50%;border:1px solid rgba(31,211,227,.4);stroke:var(--cy);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.about-u b{display:block;font-size:13.5px;font-weight:800}
+.about-u span{font-size:12.5px;color:var(--mu);line-height:1.45;display:block}
+.about-who{grid-column:1/-1;font-size:12px;color:var(--mu);border-top:1px solid var(--line2);padding-top:14px;margin-top:-14px}
+.about-who b{color:var(--ink2)}
+@media(max-width:1000px){.stick{grid-template-columns:1fr;gap:18px;padding:84px 16px 20px;align-content:center}.stitle{font-size:24px;margin:6px 0 10px}.sstep{padding:8px 0}.sstep p{display:none}.lcls{grid-template-columns:1fr 1fr}.lsec{padding:80px 16px}.lstats{gap:28px}.lnav{padding:0 16px}.about-in{grid-template-columns:1fr;gap:18px;padding:20px 16px}.about-u{grid-template-columns:1fr}}
+@media(max-width:560px){.lcls{grid-template-columns:1fr}}
+
+@media(max-width:1000px){
+  .about-u{grid-template-columns:repeat(3,1fr)}
+  .list{flex-direction:row;overflow-x:auto;overflow-y:hidden;max-height:none;gap:6px;padding-bottom:4px;scroll-snap-type:x proximity;scrollbar-width:none}
+  .list::-webkit-scrollbar{display:none}
+  .item{width:auto;flex:none;border:1px solid var(--line2);padding:8px 14px;scroll-snap-align:center}
+  .item.on{border-color:var(--cy)}
+  .item .nm{flex:none}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 18px}
+}
+/* ===== dashboard ===== */
+.layout.full{grid-template-columns:minmax(0,1fr)}
+.layout.full .side{display:none}
+.subnav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:4px 0 30px}
+.sn{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:999px;padding:9px 18px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.sn:hover{border-color:var(--cy);color:var(--cy)}
+.sn.on{background:var(--cy);color:#041416;border-color:var(--cy);box-shadow:0 0 18px rgba(31,211,227,.35)}
+.dhead{text-align:center;margin-bottom:22px}
+.dhead .k{font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--cy);text-transform:uppercase}
+.dhead h2{font-family:var(--disp);font-size:clamp(26px,3vw,38px);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:8px 0 8px}
+.dhead p{color:var(--mu);max-width:700px;margin:0 auto;font-size:14px}
+.kp6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.kp{background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:18px 16px}
+.kp .lbl{font-size:10px}
+.kp b{display:block;font-family:var(--disp);font-size:26px;font-weight:700;margin:8px 0 2px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kp span{font-size:11.5px;color:var(--mu);line-height:1.4;display:block}
+.mix{display:flex;height:34px;border-radius:10px;overflow:hidden;margin-top:12px}
+.mix div{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#0A0B0C;min-width:0}
+.mixl{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:12px;font-size:12px;color:var(--mu)}
+.mixl span{display:flex;align-items:center;gap:8px}
+.dg2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.dg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.ins h4{margin-bottom:8px}
+.ins p{font-size:13.5px;color:var(--ink2)}
+.ins .big{font-family:var(--disp);font-size:30px;font-weight:700;color:var(--cy);display:block;margin-bottom:6px}
+.rq{background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:28px;margin-bottom:22px}
+.rqh{display:flex;gap:18px;align-items:flex-start;margin-bottom:20px}
+.rqn{font-family:var(--disp);font-size:15px;font-weight:800;color:#041416;background:var(--cy);border-radius:10px;padding:8px 12px;box-shadow:0 0 18px rgba(31,211,227,.3);flex:none}
+.rqh h3{font-family:var(--disp);font-size:22px;font-weight:700;line-height:1.2}
+.rqh p{font-size:13px;color:var(--mu);margin-top:4px}
+.rqb{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;align-items:start}
+.stt{width:100%;border-collapse:collapse;font-size:13px}
+.stt td{padding:9px 4px;border-bottom:1px solid var(--line2);vertical-align:top}
+.stt td:first-child{color:var(--mu)}
+.stt td:last-child{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stt tr:last-child td{border-bottom:0}
+.read{margin-top:16px;padding:14px 16px;border-radius:12px;background:var(--cyS);border:1px solid rgba(31,211,227,.25);font-size:13px;color:var(--ink2)}
+.read b{color:var(--cy)}
+.mt{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.mt th{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:right;padding:8px 6px;border-bottom:1px solid var(--line)}
+.mt th:first-child,.mt th:nth-child(2),.mt td:first-child,.mt td:nth-child(2){text-align:left}
+.mt td{padding:9px 6px;border-bottom:1px solid var(--line2);text-align:right}
+.mt tr.hl td{background:rgba(31,211,227,.06)}
+.calc{background:var(--sunk);border:1px solid var(--line2);border-radius:12px;padding:16px;margin-top:16px}
+.calc select,.cmpsel select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;outline:none}
+.calc select:focus,.cmpsel select:focus{border-color:var(--cy)}
+.cl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;margin-top:12px;font-size:13px}
+.cl span:nth-child(even){font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.cl .eq{grid-column:1/-1;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--cy);background:var(--card);border-radius:8px;padding:8px 10px;overflow-x:auto}
+.hmw{overflow-x:auto;scrollbar-width:thin}
+.hm{border-collapse:separate;border-spacing:3px;min-width:860px;width:100%;font-size:11.5px}
+.hm th{font-size:10px;font-weight:700;color:var(--mu);letter-spacing:.04em;padding:4px 2px 8px;vertical-align:bottom;line-height:1.25}
+.hm th.rn,.hm td.rn{text-align:left;white-space:nowrap;padding-right:10px;font-size:12px;font-weight:600;color:var(--ink2)}
+.hm td.rn{cursor:pointer}
+.hm td.rn:hover{color:var(--cy)}
+.hm td.c{text-align:center;border-radius:5px;height:24px;font-weight:700;font-variant-numeric:tabular-nums;color:#fff}
+.hm td.na{background:transparent;color:var(--dim);font-weight:400}
+.hm tr.it td.rn{color:var(--cy)}
+.hm td.g{font-weight:800;text-align:right;padding-left:8px;font-variant-numeric:tabular-nums}
+.hleg{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--mu);margin-top:12px;flex-wrap:wrap}
+.hleg i{display:block;width:160px;height:8px;border-radius:999px;background:linear-gradient(90deg,var(--st),#1E2124,var(--cv))}
+.cmpsel{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:20px}
+.cmpsel label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu)}
+.ct{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.ct th{padding:12px 10px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--disp);font-size:16px}
+.ct th:first-child{text-align:left;font-family:var(--sans);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.ct td{padding:10px;border-bottom:1px solid var(--line2);text-align:right}
+.ct td:first-child{text-align:left;color:var(--mu)}
+.ct td small{display:block;color:var(--dim);font-size:11px;font-weight:400}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+@media(max-width:1180px){.kp6{grid-template-columns:repeat(3,minmax(0,1fr))}.rqb{grid-template-columns:1fr}}
+@media(max-width:1000px){.dg2,.dg3{grid-template-columns:1fr}}
+@media(max-width:700px){.kp6{grid-template-columns:repeat(2,minmax(0,1fr))}.kp b{font-size:22px}.rq{padding:20px 16px}.rqh h3{font-size:18px}.sn{padding:8px 13px;font-size:10.5px}.tabs{grid-template-columns:repeat(4,1fr)!important}.ct{font-size:12.5px}.ct th{font-size:14px}}
+
+/* ===== phone layout ===== */
+@media(max-width:700px){
+  body{font-size:14px}
+  .top{flex-wrap:wrap;height:auto;padding:0 16px;gap:0}
+  .top .brand{flex:1;height:54px;display:flex;align-items:center;font-size:20px}
+  .tabs{order:3;width:calc(100% + 32px);margin:0 -16px;height:44px;gap:0;border-top:1px solid var(--line2);display:grid;grid-template-columns:repeat(3,1fr)}
+  .tab{white-space:nowrap;font-size:10.5px;letter-spacing:.12em}
+  .tab.on::after{left:22%;right:22%}
+  .about-in{padding:18px 16px 16px;gap:14px}
+  .about h2{font-size:18px}
+  .about-u{grid-template-columns:repeat(3,1fr);gap:8px}
+  .about-u>div{grid-template-columns:1fr;justify-items:center;align-content:start;text-align:center;gap:6px;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:12px 6px}
+  .about-u span{font-size:11px}
+  .about-u b{font-size:12.5px}
+  .about-who{margin-top:0;padding-top:12px;font-size:11.5px}
+  .layout{gap:18px;padding:16px 0 0}
+  .side{padding:0}
+  .side .lbl{margin:0 16px 10px}
+  .search{width:calc(100% - 32px);margin:0 16px 10px}
+  .list{flex-direction:row;overflow-x:auto;overflow-y:hidden;max-height:none;gap:6px;padding:0 16px 4px;scroll-snap-type:x proximity;scrollbar-width:none}
+  .list::-webkit-scrollbar{display:none}
+  .item{width:auto;flex:none;border:1px solid var(--line2);padding:8px 14px;scroll-snap-align:center}
+  .item.on{border-color:var(--cy)}
+  .item .nm{flex:none}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 16px 0;padding:12px 0 0;font-size:11.5px}
+  main{padding:0 16px}
+  .hmain{padding:24px 20px}
+  .hmain h2{font-size:25px;margin:16px 0 10px;text-wrap:wrap}
+  .hmain p{font-size:14px}
+  .tag{font-size:10px;padding:5px 12px}
+  .kpi{padding:20px 10px}
+  .kpi b{font-size:23px}
+  .kpi .lbl{font-size:9.5px;letter-spacing:.1em}
+  .kpi span{font-size:11px}
+  .sec{margin-top:48px}
+  .sech{margin-bottom:18px}
+  .sech h3{font-size:23px}
+  .sech p{display:block;font-size:12.5px}
+  .card{padding:20px 16px}
+  .ev{display:block;overflow:visible}
+  .ev thead{display:none}
+  .ev tbody{display:block}
+  .ev tr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;padding:12px 0;border-bottom:1px solid var(--line2)}
+  .ev tr:last-child{border-bottom:0}
+  .ev td{padding:0;border:0}
+  .ev td:nth-child(3){grid-column:1/-1}
+  .step,.qs li{font-size:13.5px}
+  .tbl th:nth-child(6),.tbl td:nth-child(6),.tbl th:nth-child(7),.tbl td:nth-child(7){display:none}
+  .tbl th,.tbl td{padding:10px 8px}
+  .tw{padding:4px 6px}
+  .mgrid .card[style]{grid-column:auto!important}
+  .foot{padding:0 8px}
+  .giant{margin:40px 0 0}
+  /* landing */
+  .lnav{height:62px}
+  .lhero{padding:100px 20px 90px}
+  .lwm{font-size:clamp(44px,14vw,80px);margin:22px 0 18px}
+  .eyebrow{font-size:10px;letter-spacing:.14em;padding:6px 12px}
+  .lcta{flex-direction:column;align-items:stretch;width:100%;max-width:320px}
+  .lcta .btn{justify-content:center}
+  .lstats{gap:22px;margin-top:44px}
+  .lstats b{font-size:21px}
+  .lstats span{font-size:9.5px}
+  .stick{padding:72px 16px 16px}
+  .stitle{font-size:22px}
+  .sstep{grid-template-columns:32px minmax(0,1fr);gap:8px;padding:7px 0}
+  .sstep h5{font-size:14px}
+  .sbar{margin-top:10px}
+  .schart{padding:14px 12px 8px;border-radius:16px}
+  .gapread{position:static;text-align:left;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .gapread b{font-size:30px}
+  .gapread span{flex-basis:100%}
+  .lsec{padding:72px 16px}
+  .lc{padding:22px 18px}
+  .lend{padding:20px 16px 72px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+*{-webkit-tap-highlight-color:transparent}
+button,select,a,.hm td.rn{touch-action:manipulation}
+.cmpsel .pick{display:inline-flex;align-items:center;gap:8px}
+.hm th.rn,.hm td.rn{position:sticky;left:0;z-index:2;background:var(--card)}
+.swipe{display:none}
+.hleg{flex-wrap:wrap;row-gap:6px}
+@media(max-width:700px){
+  input,select,textarea{font-size:16px!important}
+  .cmpsel{flex-direction:column;align-items:stretch;gap:8px;max-width:320px;margin-left:auto;margin-right:auto}
+  .cmpsel .pick{justify-content:space-between;width:100%}
+  .cmpsel select{flex:0 0 190px;padding:8px 12px}
+  .ct{font-size:12px}
+  .ct th{font-size:13px;padding:8px 6px}
+  .ct td{padding:8px 6px}
+  .ct th:first-child{font-size:9.5px;letter-spacing:.08em}
+  .ct td small{font-size:10px}
+  .mt{font-size:12px}
+  .mt th{font-size:9px;letter-spacing:.06em;padding:8px 4px}
+  .mt td{padding:8px 4px}
+  .ct .pill{white-space:normal;font-size:10px;padding:3px 7px;line-height:1.25;text-align:center;letter-spacing:0}
+  .ct td small{white-space:normal}
+  .swipe{display:block;font-size:12px;color:var(--mu);margin:0 0 8px}
+  .hm{min-width:700px}
+  .hleg span[style]{margin-left:0!important;width:100%}
+}
+</style>
+</head>
+<body>
+<div id="landing">
+  <nav class="lnav" id="lnav"><div class="brand">Gapline<i>.</i></div><button class="btn sm" data-go>Open dashboard</button></nav>
+  <section class="lhero">
+    <div class="lgrid"></div><div class="lglow"></div>
+    <span class="eyebrow">AI conversion diagnostics · EU-27</span>
+    <h1 class="lwm">Gapline<i>.</i></h1>
+    <p class="ltag">Most European markets already have the cloud foundations for AI. Gapline shows where those foundations sit unused, and what to do about it.</p>
+    <div class="lcta"><button class="btn" data-go>Open the dashboard</button><button class="btn ghost" id="howbtn">See how it works</button></div>
+    <div class="lstats"><div><b>27</b><span>EU markets</span></div><div><b>11</b><span>Sectors</span></div><div><b>2021–25</b><span>Eurostat data</span></div></div>
+    <div class="scrollhint">Scroll<i></i></div>
+  </section>
+  <section class="scene" id="how">
+    <div class="stick">
+      <div>
+        <span class="sk">How it works</span>
+        <h2 class="stitle">One line. One gap. One place to act.</h2>
+        <div class="sstep" data-i="0"><b>01</b><div><h5>Map capability</h5><p>Each market plotted by cloud adoption in 2023 and AI adoption in 2025.</p></div></div>
+        <div class="sstep" data-i="1"><b>02</b><div><h5>Draw the European line</h5><p>The relationship across all 27 markets shows the AI adoption typical for a given cloud level.</p></div></div>
+        <div class="sstep" data-i="2"><b>03</b><div><h5>Measure the gap</h5><p>The distance between a market and the line is its conversion gap.</p></div></div>
+        <div class="sstep" data-i="3"><b>04</b><div><h5>Act on it</h5><p>Each market gets a diagnosis and practical next steps.</p></div></div>
+        <div class="sbar"><i id="sbar"></i></div>
+      </div>
+      <div class="schart"><div class="gapread"><span>Conversion gap</span><b id="gnum">0.0 pp</b><small id="gname"></small></div><svg id="lsvg" viewBox="0 0 640 420" role="img" aria-label="Cloud adoption against AI adoption across EU markets"></svg></div>
+    </div>
+  </section>
+  <section class="lsec">
+    <div class="sech"><span class="n">Four diagnoses</span><h3>Every market lands in one of four positions</h3><p>The same adoption figure can hide very different situations. Gapline separates them.</p></div>
+    <div class="lcls" id="lcls"></div>
+  </section>
+  <section class="lend" id="lend">
+    <div class="fillwm" id="fillwm" aria-hidden="true">GAPLINE</div>
+    <p>Pick a market, read its gap, and see where to focus.</p>
+    <button class="btn" data-go>Enter the dashboard</button>
+  </section>
+</div>
+
+<div id="app" class="hide">
+<header class="top">
+  <div class="brand">Gapline<i>.</i></div>
+  <nav class="tabs" id="tabs">
+    <button class="tab on" data-v="dash">Dashboard</button>
+    <button class="tab" data-v="diag">Diagnosis</button>
+    <button class="tab" data-v="rank">EU ranking</button>
+    <button class="tab" data-v="meth">Method</button>
+  </nav>
+  <div class="sp"></div>
+  <div class="src">Eurostat · ICT usage in enterprises<br>EU-27 · firms 10+ employees · 2021–2025</div>
+</header>
+<div class="about"><div class="about-in">
+  <div><span class="sk">What Gapline does</span><h2>Finds European markets where firms have the <em>cloud foundations for AI</em> but are not turning them into AI use.</h2></div>
+  <div class="about-u">
+    <div><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><div><b>Diagnose</b><span>Compares each market's AI adoption with what its cloud base implies on the European line.</span></div></div>
+    <div><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><div><b>Locate</b><span>Shows which sectors fall furthest behind the same sectors elsewhere in Europe.</span></div></div>
+    <div><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg><div><b>Act</b><span>Gives practical next steps to raise AI adoption in that market.</span></div></div>
+  </div>
+  <div class="about-who"><b>Designed for</b> policymakers, industry associations and digital-transformation advisors deciding where to focus AI adoption support.</div>
+</div></div>
+
+<div class="layout full" id="layout">
+  <aside class="side">
+    <div class="lbl">Markets</div>
+    <input class="search" id="q" placeholder="Search a market" autocomplete="off" aria-label="Search a market">
+    <div class="list" id="list"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--st)"></i>Stalled foundations</span>
+      <span><i class="dot" style="background:var(--mi)"></i>Foundations missing</span>
+      <span><i class="dot" style="background:var(--cv)"></i>Converting well</span>
+      <span><i class="dot" style="background:var(--ot)"></i>On trend</span>
+    </div>
+  </aside>
+
+  <main>
+    <section id="v-dash">
+      <div class="subnav" id="subnav">
+        <button class="sn on" data-p="ov">Overview</button>
+        <button class="sn" data-p="hm">Sector heatmap</button>
+        <button class="sn" data-p="cmp">Compare markets</button>
+      </div>
+      <div id="p-ov"></div>
+      <div id="p-hm" class="hide"></div>
+      <div id="p-cmp" class="hide"></div>
+    </section>
+    <section id="v-diag" class="hide">
+      <div class="hmain" id="hero"></div>
+      <div class="kpis" id="kpis"></div>
+
+      <div class="sec">
+        <div class="sech"><span class="n">02</span><h3>Key indicators</h3><p>What points toward or against each reading.</p></div>
+        <div class="g2">
+          <div class="card"><h4>Capability against adoption</h4><div class="sub">Cloud adoption 2023 against AI adoption 2025. The coloured segment is the conversion gap.</div><div id="scatter"></div></div>
+          <div class="card"><h4>Evidence table</h4><div class="sub">Each indicator and the reading it supports</div><table class="ev" id="ev"></table></div>
+        </div>
+        <div class="card" style="margin-top:16px"><h4>Gap by sector</h4><div class="sub">Each sector against the same sector in other markets. Negative means below the European line.</div><div id="sectors"></div></div>
+      </div>
+
+      <div class="sec">
+        <div class="sech"><span class="n">03</span><h3>Next steps</h3><p>Practical actions to raise AI adoption, based on the market's diagnosis.</p></div>
+        <div class="card"><h4>Recommended approach</h4><div class="sub">Where to focus first</div><div id="recs"></div></div>
+      </div>
+      <p class="foot">The data show sequence, not cause: cloud adoption is measured two years before AI adoption, with no counterfactual. Results describe markets, not individual firms.</p>
+      <div class="giant" aria-hidden="true">GAPLINE</div>
+    </section>
+
+    <section id="v-rank" class="hide">
+      <div class="sech"><span class="n">EU</span><h3>Ranking by conversion gap</h3><p>Click a column to sort, a row to open the market.</p></div>
+      <div class="card tw"><table class="tbl" id="tbl"></table></div>
+    </section>
+
+    <section id="v-meth" class="hide">
+      <div class="sech"><span class="n">M</span><h3>Method</h3></div>
+      <div class="mgrid">
+        <div class="card">
+          <h4>What Gapline measures</h4>
+          <p>Gapline compares each market's AI adoption in 2025 with the level its 2023 cloud adoption implies on a line fitted across all 27 markets. The difference is the <b>conversion gap</b>: a large negative gap means capability exists and is not being converted into use.</p>
+          <p>The same published adoption figure can hide two situations. Gapline separates a market that lacks digital foundations from one that has them and does not use them.</p>
+        </div>
+        <div class="card">
+          <h4>How a market is classified</h4>
+          <div class="rule"><b>1</b><div>Gap of −5 pp or lower</div><span class="pill" style="background:var(--stS);color:var(--st)">Stalled foundations</span></div>
+          <div class="rule"><b>2</b><div>Gap of +5 pp or higher</div><span class="pill" style="background:var(--cvS);color:var(--cv)">Converting well</span></div>
+          <div class="rule"><b>3</b><div>Cloud more than 6 pp below the EU mean</div><span class="pill" style="background:var(--miS);color:var(--mi)">Foundations missing</span></div>
+          <div class="rule" style="border:0"><b>4</b><div>Everything else</div><span class="pill" style="background:var(--otS);color:var(--ot)">On trend</span></div>
+          <p class="note">Rules apply in this order. The ±5 pp boundary is a stated judgement, not a value derived from the data.</p>
+        </div>
+        <div class="card">
+          <h4>How a prediction is calculated</h4>
+          <p>An ordinary least squares line is fitted across the 27 markets: <b>predicted AI 2025 = 2.913 + 0.3806 × cloud 2023</b>. The slope is 0.381: ten points more cloud go with about 3.8 points more AI. The line explains 37% of the variation (R² = 0.373).</p>
+          <p>The <b>conversion gap</b> is observed minus predicted. Italy: 2.913 + 0.3806 × 61.4 = 26.3% predicted, 16.4% observed, gap −9.9 pp.</p>
+        </div>
+        <div class="card">
+          <h4>Confidence rule for stalled markets</h4>
+          <p>The gap is also computed two more ways: <b>industry-adjusted</b> (average residual from the model with 50 sector fixed effects) and <b>net of prior adoption</b> (residual from the model that adds 2021 AI adoption).</p>
+          <p>A stalled market is <b>confirmed</b> if both adjusted gaps are also −5 pp or lower, and <b>provisional</b> otherwise. On 2025 data: Poland and Malta confirmed; Cyprus, Italy, Hungary, Ireland and Portugal provisional.</p>
+        </div>
+        <div class="card">
+          <h4>What it does not claim</h4>
+          <ul>
+            <li>It shows sequence, not cause. There is no counterfactual.</li>
+            <li>The gap is inferred from a remainder, not measured directly.</li>
+            <li>With 27 markets, null results carry little weight. Skills are reported as not detected, not ruled out.</li>
+            <li>Findings are about markets, not firms. Firms under 10 employees are out of scope.</li>
+          </ul>
+        </div>
+        <div class="card" style="grid-column:1/-1">
+          <h4>Data</h4>
+          <p>Eurostat, Community Survey on ICT Usage and E-Commerce in Enterprises (isoc_eb_ai, isoc_eb_ain2, isoc_cicce_use, isoc_ske_itspe, isoc_ske_itts) and national accounts (nama_10_pc). EU-27 figures are simple averages of the 27 markets (AI adoption 2025: 20.7%; Eurostat's weighted EU figure is 20.0%).</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+</div><!-- /app -->
+<script>
+const DATA = {"rows": [{"g": "AT", "n": "Austria", "ai21": 8.8, "ai25": 30.0, "cl": 46.5, "gap": 9.3, "lo": 6.4, "hi": 12.4, "comp": 12.3, "net": 7.6, "sec": {"ICT services": 21.0, "IT & information services": 21.3, "Information & communication": 19.7, "Professional services": 14.3, "Electronics manufacturing": null, "Manufacturing": 13.5, "Wholesale & retail": 7.4, "Real estate": null, "Administrative services": 5.7, "Transport": 6.6, "Accommodation & food": 11.8}}, {"g": "BE", "n": "Belgium", "ai21": 10.3, "ai25": 34.5, "cl": 51.7, "gap": 12.0, "lo": 8.7, "hi": 15.4, "comp": 20.5, "net": 9.2, "sec": {"ICT services": 19.3, "IT & information services": null, "Information & communication": 16.0, "Professional services": 16.7, "Electronics manufacturing": null, "Manufacturing": 18.9, "Wholesale & retail": 11.9, "Real estate": null, "Administrative services": 7.0, "Transport": 7.8, "Accommodation & food": 4.7}}, {"g": "BG", "n": "Bulgaria", "ai21": 3.3, "ai25": 8.6, "cl": 17.5, "gap": -1.0, "lo": -6.7, "hi": 3.2, "comp": -2.9, "net": -1.7, "sec": {"ICT services": -11.0, "IT & information services": -7.5, "Information & communication": -7.8, "Professional services": -1.8, "Electronics manufacturing": -15.6, "Manufacturing": -3.4, "Wholesale & retail": -1.4, "Real estate": 0.8, "Administrative services": -1.8, "Transport": 3.4, "Accommodation & food": 2.4}}, {"g": "CY", "n": "Cyprus", "ai21": 2.6, "ai25": 9.3, "cl": 52.9, "gap": -13.8, "lo": -17.1, "hi": -10.1, "comp": -13.8, "net": -4.6, "sec": {"ICT services": -12.5, "IT & information services": -13.5, "Information & communication": -15.9, "Professional services": -26.7, "Electronics manufacturing": null, "Manufacturing": -17.1, "Wholesale & retail": -17.0, "Real estate": -13.6, "Administrative services": -11.4, "Transport": -9.5, "Accommodation & food": -9.7}}, {"g": "CZ", "n": "Czechia", "ai21": 4.5, "ai25": 17.6, "cl": 47.2, "gap": -3.3, "lo": -6.2, "hi": -0.1, "comp": -2.4, "net": 1.7, "sec": {"ICT services": -4.3, "IT & information services": 1.3, "Information & communication": 0.0, "Professional services": -5.5, "Electronics manufacturing": -5.2, "Manufacturing": -2.5, "Wholesale & retail": -0.1, "Real estate": -4.6, "Administrative services": -7.3, "Transport": -6.9, "Accommodation & food": -2.0}}, {"g": "DE", "n": "Germany", "ai21": 10.6, "ai25": 26.0, "cl": 47.0, "gap": 5.2, "lo": 2.2, "hi": 8.3, "comp": 6.9, "net": 0.9, "sec": {"ICT services": 12.1, "IT & information services": 15.4, "Information & communication": 15.0, "Professional services": 9.6, "Electronics manufacturing": 7.4, "Manufacturing": 5.2, "Wholesale & retail": 6.3, "Real estate": 8.7, "Administrative services": 1.8, "Transport": -0.7, "Accommodation & food": 2.5}}, {"g": "DK", "n": "Denmark", "ai21": 23.9, "ai25": 42.0, "cl": 69.5, "gap": 12.7, "lo": 7.8, "hi": 18.9, "comp": 10.9, "net": -6.0, "sec": {"ICT services": 10.5, "IT & information services": 10.4, "Information & communication": 10.6, "Professional services": 16.9, "Electronics manufacturing": null, "Manufacturing": 11.3, "Wholesale & retail": 17.5, "Real estate": null, "Administrative services": 4.7, "Transport": 5.9, "Accommodation & food": 5.0}}, {"g": "EE", "n": "Estonia", "ai21": 2.8, "ai25": 23.4, "cl": 58.6, "gap": -1.8, "lo": -5.6, "hi": 2.6, "comp": -0.1, "net": 8.5, "sec": {"ICT services": -8.4, "IT & information services": -9.1, "Information & communication": -8.0, "Professional services": 9.4, "Electronics manufacturing": 7.0, "Manufacturing": -0.7, "Wholesale & retail": -5.0, "Real estate": -1.3, "Administrative services": -5.3, "Transport": -3.1, "Accommodation & food": -0.0}}, {"g": "GR", "n": "Greece", "ai21": 2.6, "ai25": 8.9, "cl": 23.6, "gap": -3.0, "lo": -7.6, "hi": 0.7, "comp": -0.4, "net": -1.1, "sec": {"ICT services": -6.4, "IT & information services": -1.4, "Information & communication": -8.1, "Professional services": 0.5, "Electronics manufacturing": null, "Manufacturing": -3.0, "Wholesale & retail": -1.3, "Real estate": 0.9, "Administrative services": 2.9, "Transport": 5.1, "Accommodation & food": -0.3}}, {"g": "ES", "n": "Spain", "ai21": 7.7, "ai25": 20.3, "cl": 30.0, "gap": 5.9, "lo": 2.2, "hi": 9.1, "comp": 9.1, "net": 1.8, "sec": {"ICT services": 5.6, "IT & information services": 9.1, "Information & communication": 6.2, "Professional services": 5.7, "Electronics manufacturing": null, "Manufacturing": 4.0, "Wholesale & retail": 4.7, "Real estate": 20.1, "Administrative services": 4.6, "Transport": 7.9, "Accommodation & food": 9.2}}, {"g": "FI", "n": "Finland", "ai21": 15.8, "ai25": 37.8, "cl": 78.3, "gap": 5.1, "lo": -0.8, "hi": 13.0, "comp": 8.6, "net": 0.8, "sec": {"ICT services": 11.3, "IT & information services": null, "Information & communication": 8.1, "Professional services": 24.8, "Electronics manufacturing": null, "Manufacturing": null, "Wholesale & retail": 3.8, "Real estate": 19.3, "Administrative services": 7.2, "Transport": -11.2, "Accommodation & food": 0.2}}, {"g": "FR", "n": "France", "ai21": 6.7, "ai25": 18.2, "cl": 26.8, "gap": 5.1, "lo": 0.9, "hi": 8.5, "comp": 8.3, "net": 1.6, "sec": {"ICT services": 7.2, "IT & information services": null, "Information & communication": 5.8, "Professional services": 1.0, "Electronics manufacturing": 9.5, "Manufacturing": 5.0, "Wholesale & retail": 1.0, "Real estate": 13.1, "Administrative services": 6.3, "Transport": 3.3, "Accommodation & food": 7.0}}, {"g": "HR", "n": "Croatia", "ai21": 8.7, "ai25": 15.2, "cl": 45.1, "gap": -4.9, "lo": -7.8, "hi": -1.9, "comp": -2.5, "net": -6.9, "sec": {"ICT services": 12.8, "IT & information services": 14.1, "Information & communication": 9.2, "Professional services": -2.8, "Electronics manufacturing": 28.7, "Manufacturing": -5.6, "Wholesale & retail": -1.9, "Real estate": 7.8, "Administrative services": -3.1, "Transport": -7.4, "Accommodation & food": -5.3}}, {"g": "HU", "n": "Hungary", "ai21": 3.0, "ai25": 10.4, "cl": 44.9, "gap": -9.6, "lo": -12.6, "hi": -6.7, "comp": -10.0, "net": -3.0, "sec": {"ICT services": -15.4, "IT & information services": -10.9, "Information & communication": -13.6, "Professional services": -15.1, "Electronics manufacturing": -15.3, "Manufacturing": -10.7, "Wholesale & retail": -8.7, "Real estate": -15.0, "Administrative services": -10.8, "Transport": -6.3, "Accommodation & food": -6.2}}, {"g": "IE", "n": "Ireland", "ai21": 7.9, "ai25": 19.6, "cl": 63.1, "gap": -7.3, "lo": -11.5, "hi": -2.2, "comp": -7.2, "net": -3.5, "sec": {"ICT services": 2.1, "IT & information services": 3.0, "Information & communication": -6.4, "Professional services": -12.7, "Electronics manufacturing": -5.2, "Manufacturing": -7.3, "Wholesale & retail": -11.9, "Real estate": -7.6, "Administrative services": -0.4, "Transport": -1.9, "Accommodation & food": -4.3}}, {"g": "IT", "n": "Italy", "ai21": 6.2, "ai25": 16.4, "cl": 61.4, "gap": -9.9, "lo": -13.9, "hi": -5.0, "comp": -8.6, "net": -4.0, "sec": {"ICT services": -16.6, "IT & information services": -15.0, "Information & communication": -14.3, "Professional services": -8.2, "Electronics manufacturing": -11.8, "Manufacturing": -9.7, "Wholesale & retail": -6.2, "Real estate": -11.6, "Administrative services": -9.5, "Transport": -6.5, "Accommodation & food": -5.5}}, {"g": "LT", "n": "Lithuania", "ai21": 4.4, "ai25": 21.3, "cl": 38.4, "gap": 3.8, "lo": 0.8, "hi": 6.6, "comp": 3.9, "net": 6.6, "sec": {"ICT services": 6.2, "IT & information services": 3.7, "Information & communication": 2.9, "Professional services": 2.0, "Electronics manufacturing": null, "Manufacturing": 3.0, "Wholesale & retail": 3.0, "Real estate": 1.7, "Administrative services": 12.6, "Transport": 10.2, "Accommodation & food": -1.0}}, {"g": "LU", "n": "Luxembourg", "ai21": 13.0, "ai25": 33.6, "cl": 37.0, "gap": 16.6, "lo": 13.6, "hi": 19.5, "comp": 17.5, "net": 6.2, "sec": {"ICT services": 14.4, "IT & information services": 14.9, "Information & communication": 16.6, "Professional services": 16.5, "Electronics manufacturing": null, "Manufacturing": 21.9, "Wholesale & retail": 11.6, "Real estate": null, "Administrative services": 15.2, "Transport": 18.6, "Accommodation & food": 8.4}}, {"g": "LV", "n": "Latvia", "ai21": 3.7, "ai25": 12.2, "cl": 35.8, "gap": -4.3, "lo": -7.4, "hi": -1.4, "comp": -2.8, "net": -1.1, "sec": {"ICT services": -8.9, "IT & information services": -7.2, "Information & communication": -6.6, "Professional services": -5.7, "Electronics manufacturing": -5.5, "Manufacturing": -2.8, "Wholesale & retail": -4.8, "Real estate": -4.9, "Administrative services": -3.9, "Transport": -3.0, "Accommodation & food": -3.6}}, {"g": "MT", "n": "Malta", "ai21": 10.2, "ai25": 21.5, "cl": 66.7, "gap": -6.8, "lo": -11.4, "hi": -1.1, "comp": -7.0, "net": -5.6, "sec": {"ICT services": -4.4, "IT & information services": -7.0, "Information & communication": -7.1, "Professional services": -10.4, "Electronics manufacturing": 24.0, "Manufacturing": -8.7, "Wholesale & retail": -11.5, "Real estate": -7.7, "Administrative services": -4.1, "Transport": -1.4, "Accommodation & food": -8.9}}, {"g": "NL", "n": "Netherlands", "ai21": 13.1, "ai25": 33.2, "cl": 64.2, "gap": 5.9, "lo": 1.5, "hi": 11.2, "comp": 5.0, "net": 2.1, "sec": {"ICT services": 0.5, "IT & information services": 2.5, "Information & communication": 3.4, "Professional services": 10.1, "Electronics manufacturing": -0.6, "Manufacturing": 3.2, "Wholesale & retail": 5.1, "Real estate": null, "Administrative services": 4.4, "Transport": 0.6, "Accommodation & food": -2.2}}, {"g": "PL", "n": "Poland", "ai21": 2.9, "ai25": 8.4, "cl": 55.7, "gap": -15.7, "lo": -19.3, "hi": -11.7, "comp": -14.9, "net": -6.3, "sec": {"ICT services": -26.2, "IT & information services": -23.9, "Information & communication": -25.4, "Professional services": -19.7, "Electronics manufacturing": -17.8, "Manufacturing": -14.6, "Wholesale & retail": -13.4, "Real estate": -19.4, "Administrative services": -12.9, "Transport": -13.0, "Accommodation & food": -9.6}}, {"g": "PT", "n": "Portugal", "ai21": 7.2, "ai25": 11.5, "cl": 37.5, "gap": -5.6, "lo": -8.6, "hi": -2.8, "comp": -4.5, "net": -7.2, "sec": {"ICT services": -6.3, "IT & information services": -4.6, "Information & communication": -4.2, "Professional services": -9.6, "Electronics manufacturing": -0.2, "Manufacturing": -5.9, "Wholesale & retail": -7.1, "Real estate": -2.2, "Administrative services": -5.8, "Transport": 5.3, "Accommodation & food": -0.4}}, {"g": "RO", "n": "Romania", "ai21": 1.4, "ai25": 5.2, "cl": 18.4, "gap": -4.7, "lo": -10.2, "hi": -0.5, "comp": -7.6, "net": -2.3, "sec": {"ICT services": -18.9, "IT & information services": -18.3, "Information & communication": -18.1, "Professional services": -12.9, "Electronics manufacturing": -9.3, "Manufacturing": -5.7, "Wholesale & retail": -4.8, "Real estate": -9.5, "Administrative services": -4.9, "Transport": 0.4, "Accommodation & food": -0.1}}, {"g": "SE", "n": "Sweden", "ai21": 9.9, "ai25": 35.0, "cl": 71.6, "gap": 4.9, "lo": -0.3, "hi": 11.5, "comp": 10.1, "net": 7.7, "sec": {"ICT services": 17.4, "IT & information services": 18.0, "Information & communication": 18.6, "Professional services": 17.3, "Electronics manufacturing": 6.1, "Manufacturing": 4.8, "Wholesale & retail": 5.1, "Real estate": 27.2, "Administrative services": 2.5, "Transport": -9.6, "Accommodation & food": 2.8}}, {"g": "SI", "n": "Slovenia", "ai21": 11.7, "ai25": 21.6, "cl": 40.2, "gap": 3.4, "lo": 0.5, "hi": 6.2, "comp": 7.6, "net": -4.3, "sec": {"ICT services": 5.8, "IT & information services": 12.7, "Information & communication": 9.1, "Professional services": -8.0, "Electronics manufacturing": 7.3, "Manufacturing": 5.9, "Wholesale & retail": 13.0, "Real estate": 5.2, "Administrative services": 2.4, "Transport": -2.0, "Accommodation & food": 3.0}}, {"g": "SK", "n": "Slovakia", "ai21": 5.2, "ai25": 18.0, "cl": 34.4, "gap": 2.0, "lo": -1.3, "hi": 4.9, "comp": 0.3, "net": 2.7, "sec": {"ICT services": -6.9, "IT & information services": -8.1, "Information & communication": -5.7, "Professional services": -5.7, "Electronics manufacturing": -3.6, "Manufacturing": 1.1, "Wholesale & retail": 4.6, "Real estate": -7.3, "Administrative services": 4.0, "Transport": 7.4, "Accommodation & food": 2.2}}], "a": 2.913, "b": 0.3806, "meanCl": 46.8, "meanAi": 20.7};
+const M=DATA.rows, A=DATA.a, B=DATA.b, MEAN_CL=DATA.meanCl, MEAN_AI=DATA.meanAi;
+const NAME={stalled:'Stalled foundations',missing:'Foundations missing',converting:'Converting well',ontrend:'On trend'};
+const VAR={stalled:'st',missing:'mi',converting:'cv',ontrend:'ot'};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue('--'+n).trim();
+const col=d=>css(VAR[d]), cvar=d=>`var(--${VAR[d]})`, svar=d=>`var(--${VAR[d]}S)`;
+const fmt=(v,d=1)=>(v<0?'\u2212':'')+Math.abs(v).toFixed(d);
+const sgn=(v,d=1)=>(v>0?'+':v<0?'\u2212':'')+Math.abs(v).toFixed(d);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const pill=d=>`<span class="pill" style="background:${svar(d)};color:${cvar(d)}">${NAME[d]}</span>`;
+const SECN=11;
+
+function diag(r){ if(r.gap<=-5)return'stalled'; if(r.gap>=5)return'converting'; if(r.cl<MEAN_CL-6)return'missing'; return'ontrend'; }
+function conf(r){ if(r.d!=='stalled')return null; return(r.comp<=-5&&r.net<=-5)?'confirmed':'provisional'; }
+const band=v=>v<=-5?'stalled':v>=5?'converting':'mid';
+const midName=r=>r.cl<MEAN_CL-6?'missing':'ontrend';
+const bandName=(v,r)=>{const b=band(v);return b==='mid'?midName(r):b;};
+
+
+
+const rank=(k)=>{const s=[...M].sort((a,b)=>b[k]-a[k]);const o={};s.forEach((r,i)=>o[r.g]=i+1);return o;};
+const RAI=rank('ai25'), RCL=rank('cl');
+M.forEach(r=>{r.d=diag(r);r.c=conf(r);r.pred=r.ai25-r.gap;});
+
+let sel='IT', sortKey='gap', sortDir=1;
+const $=id=>document.getElementById(id);
+
+function centerChip(){const l=$('list'),it=l.querySelector('.item.on');if(it&&l.scrollWidth>l.clientWidth)l.scrollLeft=it.offsetLeft-(l.clientWidth-it.offsetWidth)/2;}
+function renderList(){
+  const q=$('q').value.trim().toLowerCase();
+  $('list').innerHTML=[...M].filter(r=>r.n.toLowerCase().includes(q)).sort((a,b)=>a.n.localeCompare(b.n))
+    .map(r=>`<button class="item ${r.g===sel?'on':''}" data-g="${r.g}"><i class="dot" style="background:${cvar(r.d)}"></i><span class="nm">${r.n}</span><span class="gp num">${sgn(r.gap)}</span></button>`).join('');
+}
+const topSectors=(r,n=3)=>Object.entries(r.sec).filter(([,v])=>v!==null).sort((a,b)=>a[1]-b[1]).slice(0,n).map(x=>x[0]);
+
+function renderHero(r){
+  const h=$('hero'); h.style.setProperty('--hc',cvar(r.d)); h.style.setProperty('--hs',svar(r.d));
+  const heads={stalled:`${r.n}'s AI adoption sits well below what its cloud base implies`,missing:`${r.n}: the digital foundations are not yet in place`,converting:`${r.n}'s AI adoption sits above what its cloud base implies`,ontrend:`${r.n}'s AI adoption is in line with its cloud base`};
+  const body={stalled:`${r.n}'s 2023 cloud adoption of ${r.cl.toFixed(1)}% places it at about ${r.pred.toFixed(1)}% AI adoption in 2025 on the European line. Observed adoption is ${r.ai25.toFixed(1)}%, a shortfall of ${Math.abs(r.gap).toFixed(1)} pp. The cloud capability is in place, but AI use has not kept pace with it.${band(r.net)!=='stalled'?` Part of the gap reflects a low starting point: after accounting for 2021 adoption, ${r.net<0?`the shortfall is ${Math.abs(r.net).toFixed(1)} pp`:'no shortfall remains'}.`:''}`,
+    missing:`${r.n}'s 2023 cloud adoption of ${r.cl.toFixed(1)}% is well below the EU mean of ${MEAN_CL.toFixed(1)}%. AI adoption of ${r.ai25.toFixed(1)}% in 2025 is low because the foundations are still being built, not because capability sits unused (gap ${sgn(r.gap)} pp).`,
+    converting:`${r.n}'s 2023 cloud adoption of ${r.cl.toFixed(1)}% places it at about ${r.pred.toFixed(1)}% AI adoption in 2025 on the European line. Observed adoption is ${r.ai25.toFixed(1)}%, ${r.gap.toFixed(1)} pp above it.`,
+    ontrend:`${r.n}'s 2023 cloud adoption of ${r.cl.toFixed(1)}% places it at about ${r.pred.toFixed(1)}% AI adoption in 2025 on the European line. Observed adoption is ${r.ai25.toFixed(1)}%, within 5 pp of it. No conversion signal in either direction.`};
+  h.innerHTML=`<span class="tag">${NAME[r.d]}</span><h2>${heads[r.d]}</h2><p>${body[r.d]}</p>`;
+}
+
+function renderKpis(r){
+  const k=[['AI adoption 2025',r.ai25.toFixed(1)+'%',`#${RAI[r.g]} of 27 · EU ${MEAN_AI.toFixed(1)}%`,''],
+    ['Cloud adoption 2023',r.cl.toFixed(1)+'%',`#${RCL[r.g]} of 27 · EU ${MEAN_CL.toFixed(1)}%`,''],
+    ['Conversion gap',sgn(r.gap)+' pp',`95% range ${fmt(r.lo)} to ${fmt(r.hi)}`,cvar(band(r.gap)==='mid'?'ontrend':band(r.gap))],
+    ['Change since 2021',sgn(r.ai25-r.ai21)+' pp',`${r.ai21.toFixed(1)}% → ${r.ai25.toFixed(1)}%`,'']];
+  const IC=[`<path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 12h4"/>`, `<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z"/>`, `<path d="M4 18 10 12"/><path d="M14 8l6-5"/><circle cx="12" cy="10" r="1.5"/>`, `<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>`];
+  $('kpis').innerHTML=k.map((x,i)=>`<div class="kpi" style="${x[3]?'--kc:'+x[3]:''}"><svg viewBox="0 0 24 24">${IC[i]}</svg><div class="lbl">${x[0]}</div><b>${x[1]}</b><span>${x[2]}</span></div>`).join('');
+}
+
+
+function renderEvidence(r){
+  const secs=Object.entries(r.sec).filter(([,v])=>v!==null).sort((a,b)=>a[1]-b[1]);
+  const rows=[['Raw conversion gap',sgn(r.gap)+' pp','Cloud-only model',bandName(r.gap,r)],
+    ['Industry-adjusted gap',sgn(r.comp)+' pp','Same-sector comparison',bandName(r.comp,r)],
+    ['Net of 2021 position',sgn(r.net)+' pp','Removes starting level',bandName(r.net,r)],
+    ['Cloud vs EU mean',sgn(r.cl-MEAN_CL)+' pp','Missing below −6 pp',r.cl<MEAN_CL-6?'missing':'ontrend']];
+  if(secs.length){ const w=secs[0],b=secs[secs.length-1];
+    rows.push(['Weakest sector',sgn(w[1],0)+' pp',w[0],bandName(w[1],r)]);
+    rows.push(['Strongest sector',sgn(b[1],0)+' pp',b[0],bandName(b[1],r)]); }
+  $('ev').innerHTML=`<thead><tr><th>Indicator</th><th>Value</th><th>Points toward</th></tr></thead><tbody>`+
+    rows.map(x=>`<tr><td>${x[0]}<small>${x[2]}</small></td><td>${x[1]}</td><td>${pill(x[3])}${x[3]===r.d?'':' <small style="display:inline;color:var(--dim)">against</small>'}</td></tr>`).join('')+'</tbody>';
+}
+
+function renderScatter(r){
+  const mob=innerWidth<700, W=mob?360:620,H=mob?290:330,ml=mob?34:46,mr=12,mt=12,mb=40,x0=10,x1=85,y0=0,y1=46;
+  const sx=v=>ml+(v-x0)/(x1-x0)*(W-ml-mr), sy=v=>H-mb-(v-y0)/(y1-y0)*(H-mt-mb);
+  const L=css('line'),MU=css('mu'),DI=css('dim'),CA=css('card'),INK=css('ink');
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cloud adoption against AI adoption">`;
+  for(let v=0;v<=45;v+=15) s+=`<line x1="${ml}" x2="${W-mr}" y1="${sy(v)}" y2="${sy(v)}" stroke="${L}"/><text x="${ml-8}" y="${sy(v)+4}" fill="${MU}" font-size="11" text-anchor="end" >${v}</text>`;
+  for(let v=20;v<=80;v+=20) s+=`<text x="${sx(v)}" y="${H-mb+18}" fill="${MU}" font-size="11" text-anchor="middle" >${v}</text>`;
+  s+=`<text x="${(ml+W-mr)/2}" y="${H-4}" fill="${DI}" font-size="11.5" text-anchor="middle">Cloud adoption 2023 (% of enterprises)</text>`;
+  s+=`<text transform="translate(12 ${(mt+H-mb)/2}) rotate(-90)" fill="${DI}" font-size="11.5" text-anchor="middle">AI adoption 2025 (%)</text>`;
+  s+=`<line x1="${sx(x0)}" y1="${sy(A+B*x0)}" x2="${sx(x1)}" y2="${sy(A+B*x1)}" stroke="${DI}" stroke-width="1.5" stroke-dasharray="5 5"/>`;
+  M.forEach(m=>{ if(m.g===r.g)return; s+=`<circle class="pt" data-g="${m.g}" cx="${sx(m.cl)}" cy="${sy(m.ai25)}" r="5" fill="${col(m.d)}" fill-opacity=".5" stroke="${CA}" style="cursor:pointer"><title>${m.n}: AI ${m.ai25.toFixed(1)}%, cloud ${m.cl.toFixed(1)}%, gap ${sgn(m.gap)} pp</title></circle>`; });
+  const px=sx(r.cl),py=sy(r.ai25),py2=sy(r.pred),c=col(r.d);
+  s+=`<line x1="${px}" x2="${px}" y1="${py}" y2="${py2}" stroke="${c}" stroke-width="2.5"/><circle cx="${px}" cy="${py2}" r="4" fill="${CA}" stroke="${MU}" stroke-width="1.5"/><circle cx="${px}" cy="${py}" r="7.5" fill="${c}" stroke="${CA}" stroke-width="2.5"/>`;
+  const halo=`paint-order:stroke;stroke:${CA};stroke-width:5px;stroke-linejoin:round`;
+  const lx=px>W*.7?px-14:px+14,an=px>W*.7?'end':'start';
+  s+=`<text x="${lx}" y="${py+4}" fill="${INK}" font-size="12.5" font-weight="600" text-anchor="${an}" style="${halo}">${r.n}</text>`;
+  const gx=px>W*.45?px-12:px+12,ga=px>W*.45?'end':'start';
+  s+=`<text x="${gx}" y="${(py+py2)/2+4}" fill="${c}" font-size="11.5" font-weight="600" text-anchor="${ga}"  style="${halo}">${sgn(r.gap)} pp</text></svg>`;
+  $('scatter').innerHTML=s;
+}
+
+function renderSectors(r){
+  const e=Object.entries(r.sec).filter(([,v])=>v!==null).sort((a,b)=>a[1]-b[1]);
+  if(!e.length){$('sectors').innerHTML='<p class="note">No sector data published for this market.</p>';return;}
+  const mob=innerWidth<700, W=mob?380:900,rh=mob?28:26,lw=mob?182:210,vw=mob?34:50,H=e.length*rh+6,aw=W-lw-vw-10;
+  const vals=e.map(x=>x[1]),lo=Math.min(0,...vals),hi=Math.max(0,...vals),span=(hi-lo)||1,cx=lw+((0-lo)/span)*aw,sc=aw/span;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%"><line x1="${cx}" x2="${cx}" y1="0" y2="${H}" stroke="${css('line')}"/>`;
+  e.forEach(([k,v],i)=>{const y=i*rh+3,w=Math.abs(v)*sc,c=col(band(v)==='mid'?'ontrend':band(v));
+    s+=`<text x="${lw-12}" y="${y+15}" fill="${css('ink2')}" font-size="${mob?11:12.5}" text-anchor="end">${k}</text><rect x="${v<0?cx-w:cx}" y="${y+5}" width="${Math.max(w,1.5)}" height="14" rx="2" fill="${c}"/><text x="${W-vw+6}" y="${y+15}" fill="${css('mu')}" font-size="11" >${sgn(v,0)}</text>`;});
+  $('sectors').innerHTML=s+`</svg><p class="note">Sectors with no published value are omitted. Categories overlap, so values are not additive.</p>`;
+}
+
+function renderSteps(r){
+  const ts=topSectors(r).join(', ');
+  const R={stalled:['Prioritise conversion support (adoption programmes, use-case pilots, advisory help for firms that already buy cloud) over further infrastructure subsidy.',ts?`Direct support to the sectors with the largest shortfall: ${ts}.`:'Direct support to the sectors with the largest shortfall.','Do not assume a skills shortage is the cause. ICT specialist employment and training show no detectable link to the gap, though the study is too small to rule skills out.','Fund demonstration projects that show firms already using cloud how to add AI to existing workflows (document processing, forecasting, customer service).'],
+    missing:['Build infrastructure first: cloud adoption is well below the EU mean.','Sequence AI-specific support after the foundations are in place, not alongside them.','Re-assess at the next Eurostat release. Rising cloud with a stable gap suggests the sequencing works.'],
+    converting:['Use as a reference market and study what enables conversion here.','Monitor whether the lead holds at the next release.','Avoid reallocating support on this signal alone: it measures conversion, not absolute adoption.'],
+    ontrend:['No conversion signal: adoption matches capability.','Further gains depend on raising capability, since the relationship rather than a shortfall explains the position.','Monitor the gap at the next release.']}[r.d];
+  let h='<div class="steps">'+R.map((t,i)=>`<div class="step"><i>${String(i+1).padStart(2,'0')}</i><div>${t}</div></div>`).join('')+'</div>';
+  if(r.d==='stalled'&&r.cl<MEAN_CL) h+=`<div class="warn">Cloud adoption (${r.cl.toFixed(1)}%) is below the EU mean (${MEAN_CL.toFixed(1)}%), so the shortfall is measured against a modest base. Capability building and conversion both matter.</div>`;
+  $('recs').innerHTML=h;
+}
+
+function renderDiag(){const r=M.find(x=>x.g===sel);centerChip();renderHero(r);renderKpis(r);renderScatter(r);renderEvidence(r);renderSectors(r);renderSteps(r);}
+
+function renderRank(){
+  const cols=[['#',null],['Market','n'],['AI 2025','ai25'],['Cloud 2023','cl'],['Gap','gap'],['Industry-adj.','comp'],['Net of 2021','net'],['Diagnosis','d']];
+  const rows=[...M].sort((a,b)=>{const x=a[sortKey],y=b[sortKey];return(typeof x==='string'?x.localeCompare(y):x-y)*sortDir;});
+  let h='<thead><tr>'+cols.map(c=>`<th data-k="${c[1]||''}">${c[0]}${c[1]===sortKey?(sortDir>0?' ↑':' ↓'):''}</th>`).join('')+'</tr></thead><tbody>';
+  h+=rows.map((r,i)=>{const gd=band(r.gap)==='mid'?'ontrend':band(r.gap);
+    return `<tr class="row" data-g="${r.g}"><td>${i+1}</td><td>${r.n}</td><td>${r.ai25.toFixed(1)}</td><td>${r.cl.toFixed(1)}</td><td style="color:${cvar(gd)};font-weight:600">${sgn(r.gap)}<span class="gb" style="width:${Math.min(Math.abs(r.gap),17)*3.2}px;background:${cvar(gd)}"></span></td><td>${sgn(r.comp)}</td><td>${sgn(r.net)}</td><td>${pill(r.d)}</td></tr>`;}).join('')+'</tbody>';
+  $('tbl').innerHTML=h;
+}
+
+let view='dash';
+function setView(v){view=v;['dash','diag','rank','meth'].forEach(k=>$('v-'+k).classList.toggle('hide',k!==v));$('layout').classList.toggle('full',v!=='diag');if(v==='dash')renderDash();document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));if(v==='rank')renderRank();if(v==='diag')renderDiag();window.scrollTo({top:0});}
+function choose(g){sel=g;try{history.replaceState(null,'','#'+g);}catch(e){}renderList();setView('diag');}
+$('list').addEventListener('click',e=>{const it=e.target.closest('.item');if(it)choose(it.dataset.g);});
+$('q').addEventListener('input',renderList);
+$('tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t)setView(t.dataset.v);});
+$('scatter').addEventListener('click',e=>{const p=e.target.closest('.pt');if(p)choose(p.dataset.g);});
+$('tbl').addEventListener('click',e=>{const th=e.target.closest('th');if(th&&th.dataset.k){sortDir=(sortKey===th.dataset.k)?-sortDir:1;sortKey=th.dataset.k;renderRank();return;}const tr=e.target.closest('tr.row');if(tr)choose(tr.dataset.g);});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(view==='diag')renderDiag();if(view==='dash')renderDash();});
+let hh='';try{hh=location.hash.replace('#','');}catch(e){}if(M.some(x=>x.g===hh))sel=hh;
+renderList();
+/* ===================== DASHBOARD ===================== */
+/* Statistics reported in the thesis (Table 5.1, Section 5.2, Appendix A); data-driven values are computed below. */
+const ST={b:0.381,se:0.099,p:'0.0007',r2:0.373,ar2:0.348,hc3:'[0.213, 0.548]',boot:'[0.183, 0.520]',bootm:0.373,loo:'0.335 – 0.405',
+  inc_b:0.259,inc_p:'0.012',inc_r2:0.541,fe_b:0.359,fe_se:0.094,fe_r2:0.624,fe_n:1129,sec_b:0.362,sec_n:278,power:'0.09 – 0.18',
+  models:[['M1','Cloud only',0.373,0.348,192.7,0.381,'0.0007'],['M2','+ ICT specialists',0.373,0.321,194.7,0.371,'0.009'],['M3','+ ICT training',0.421,0.373,192.5,0.224,'0.140'],['M4','+ prior AI (2021)',0.755,0.735,169.3,0.133,'0.089'],['M5','+ log GDP per capita',0.541,0.503,186.3,0.259,'0.012'],['M6','Full model',0.790,0.740,171.2,0.151,'0.145']]};
+const SECS=Object.keys(M[0].sec);
+const SHORT={'ICT services':'ICT services','IT & information services':'IT & info services','Information & communication':'Info & comms','Professional services':'Professional','Electronics manufacturing':'Electronics mfg','Manufacturing':'Manufacturing','Wholesale & retail':'Wholesale & retail','Real estate':'Real estate','Administrative services':'Administrative','Transport':'Transport','Accommodation & food':'Accom. & food'};
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length, sd=a=>{const m=mean(a);return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(a.length-1));};
+const byG=g=>M.find(r=>r.g===g);
+let dpage='ov', cmpSel=['IT','RO','DE'];
+function kp(label,big,small,c){return `<div class="kp"><div class="lbl">${label}</div><b style="${c?'color:'+c:''}">${big}</b><span>${small}</span></div>`;}
+function sh(k,t,p){return `<div class="dhead"><div class="k">${k}</div><h2>${t}</h2>${p?`<p>${p}</p>`:''}</div>`;}
+const MOB=()=>innerWidth<700;
+function hbars(rows,{w=MOB()?380:560,lab=MOB()?96:118,valfmt=v=>v.toFixed(1),zero=false,ref=null,refLab=''}={}){
+  const rh=17,H=rows.length*rh+30,vals=rows.map(r=>r.v),lo=Math.min(0,...vals),hi=Math.max(0,...vals),span=(hi-lo)||1,pad=zero&&lo<0?34:0,aw=w-lab-46-pad,x0=lab+pad+(-lo/span)*aw,sc=aw/span;
+  let s=`<svg viewBox="0 0 ${w} ${H}" width="100%" role="img">`;
+  if(zero) s+=`<line x1="${x0}" x2="${x0}" y1="4" y2="${H-22}" stroke="${css('line')}"/>`;
+  rows.forEach((r,i)=>{const y=i*rh+6,bw=Math.abs(r.v)*sc,x=r.v<0?x0-bw:x0;
+    s+=`<text x="${lab-8}" y="${y+11}" font-size="10.5" text-anchor="end" fill="${r.hl?css('cy'):css('ink2')}" font-weight="${r.hl?800:500}">${r.n}</text><rect x="${x}" y="${y+2}" width="${Math.max(bw,1)}" height="${rh-6}" rx="2" fill="${r.c}"${r.hl?` stroke="${css('cy')}" stroke-width="1.5"`:''}/><text x="${r.v<0&&zero?x-4:x+bw+4}" y="${y+11}" font-size="10" text-anchor="${r.v<0&&zero?'end':'start'}" fill="${css('mu')}">${valfmt(r.v)}</text>`;});
+  if(ref!==null){const xr=x0+ref*sc;s+=`<line x1="${xr}" x2="${xr}" y1="2" y2="${H-22}" stroke="${css('mu')}" stroke-dasharray="4 4"/><text x="${xr}" y="${H-8}" font-size="10" text-anchor="middle" fill="${css('mu')}">${refLab}</text>`;}
+  return s+'</svg>';
+}
+/* ---------- Overview ---------- */
+function renderOv(){
+  const ai=M.map(r=>r.ai25),a21=M.map(r=>r.ai21),hiR=M.reduce((a,b)=>a.ai25>b.ai25?a:b),loR=M.reduce((a,b)=>a.ai25<b.ai25?a:b);
+  const below=M.filter(r=>r.gap<0).length, st=M.filter(r=>r.d==='stalled'), conf=st.filter(r=>r.c==='confirmed'), worst=M.reduce((a,b)=>a.gap<b.gap?a:b), it=byG('IT');
+  const cnt=k=>M.filter(r=>r.d===k).length;
+  let h=sh('Dashboard · overview','The EU AI adoption gap at a glance','Which markets lag, and is it missing capability or unused capability? Eurostat ICT survey, EU-27, firms with 10+ employees.');
+  h+=`<div class="kp6">${kp('EU-27 average AI, 2025',mean(ai).toFixed(1)+'%',`${sgn(mean(ai)-mean(a21))} pp since 2021 (${mean(a21).toFixed(1)}%)`)}${kp('Highest to lowest',(hiR.ai25/loR.ai25).toFixed(1)+'×',`${hiR.n} ${hiR.ai25.toFixed(1)}% · ${loR.n} ${loR.ai25.toFixed(1)}%`)}${kp('Explained by cloud (R²)',Math.round(ST.r2*100)+'%',`β = ${ST.b}: +10 pp cloud ↔ +${(ST.b*10).toFixed(1)} pp AI`)}${kp('Below the European line',below+' of 27',`${27-below} at or above their prediction`)}${kp('Stalled foundations',st.length,`gap ≤ −5 pp · ${conf.length} confirmed (${conf.map(r=>r.n).join(', ')})`,css('st'))}${kp('Largest shortfall',sgn(worst.gap)+' pp',`${worst.n} · Italy ${sgn(it.gap)} pp`,css('st'))}</div>`;
+  h+=`<div class="card" style="margin-top:18px"><h4>Four diagnoses across 27 markets</h4><div class="mix">${['stalled','missing','converting','ontrend'].map(k=>`<div style="flex:${cnt(k)};background:${cvar(k)}">${cnt(k)}</div>`).join('')}</div><div class="mixl">${['stalled','missing','converting','ontrend'].map(k=>`<span><i class="dot" style="background:${cvar(k)}"></i>${NAME[k]}: ${M.filter(r=>r.d===k).map(r=>r.n).join(', ')}</span>`).join('')}</div></div>`;
+  const s1=[...M].sort((a,b)=>b.ai25-a.ai25).map(r=>({n:r.n,v:r.ai25,c:'#2B4C6E',hl:r.g==='IT'}));
+  const s2=[...M].sort((a,b)=>a.gap-b.gap).map(r=>({n:r.n,v:r.gap,c:col(r.d),hl:r.g==='IT'}));
+  h+=`<div class="dg2" style="margin-top:18px"><div class="card"><h4>AI adoption by market, 2025</h4><div class="sub">The usual view: who is high and who is low. Dashed line = EU-27 mean.</div>${hbars(s1,{ref:mean(ai),refLab:'EU mean '+mean(ai).toFixed(1)+'%',valfmt:v=>v.toFixed(1)+'%'})}</div>
+  <div class="card"><h4>Conversion gap by market</h4><div class="sub">Gapline’s view: distance from what the market’s own cloud predicts. Colour = diagnosis.</div>${hbars(s2,{zero:true,valfmt:v=>sgn(v)})}</div></div>`;
+  h+=`<div class="dg3" style="margin-top:18px"><div class="card ins"><span class="big">${(hiR.ai25/loR.ai25).toFixed(1)}×</span><h4>Adoption is highly uneven</h4><p>${hiR.n} leads at ${hiR.ai25.toFixed(1)}%, ${loR.n} trails at ${loR.ai25.toFixed(1)}%, around an EU average of ${mean(ai).toFixed(1)}%.</p></div>
+  <div class="card ins"><span class="big">${Math.round(ST.r2*100)}%</span><h4>Capability explains part of it</h4><p>Cloud adoption in 2023 accounts for ${Math.round(ST.r2*100)}% of the cross-country variation in AI adoption in 2025. The remaining ${100-Math.round(ST.r2*100)}% is what the conversion gap measures.</p></div>
+  <div class="card ins"><span class="big">Two sources</span><h4>Low adoption has two sources</h4><p>Romania combines low cloud with the lowest AI adoption: foundations missing. Italy has above-average cloud and below-average AI: stalled foundations. Same ranking position, opposite problems.</p></div></div>`;
+  $('p-ov').innerHTML=h;
+}
+/* ---------- Heatmap ---------- */
+function hmColor(v){const a=Math.min(Math.abs(v)/20,1)*.85+.12;const c=v<0?[255,93,106]:[62,227,155];return `rgba(${c[0]},${c[1]},${c[2]},${a.toFixed(2)})`;}
+function renderHm(){
+  const rows=[...M].sort((a,b)=>a.gap-b.gap),it=byG('IT');
+  const secMean=SECS.map(s=>({n:SHORT[s],v:M.filter(r=>r.sec[s]!==null&&r.sec[s]<=-5).length}));
+  const itS=Object.entries(it.sec).filter(([,v])=>v!==null).sort((a,b)=>a[1]-b[1]);
+  let h=sh('Dashboard · where conversion fails','The gap, market by sector','Each cell compares a sector with the same sector in other markets (pp). Red = below prediction, green = above. Rows ordered by overall gap; click a market to open its diagnosis.');
+  h+=`<div class="dg3" style="margin-bottom:18px">${kp('Country-sector cells',ST.fe_n.toLocaleString('en'),'50 sector categories · 11 shown here')}${kp('Capability effect within sectors','β = '+ST.fe_b,'vs 0.381 between countries: barely changed')}${kp('Italy, industry-adjusted',sgn(it.comp)+' pp','the shortfall survives the sector control',css('st'))}</div>`;
+  h+=`<div class="card"><p class="swipe">Swipe sideways to see all sectors →</p><div class="hmw"><table class="hm"><tr><th class="rn">Market</th>${SECS.map(s=>`<th>${SHORT[s]}</th>`).join('')}<th>Gap</th></tr>`+
+    rows.map(r=>`<tr class="${r.g==='IT'?'it':''}"><td class="rn" data-g="${r.g}"><i class="dot" style="background:${cvar(r.d)};display:inline-block;margin-right:7px"></i>${r.n}</td>${SECS.map(s=>{const v=r.sec[s];return v===null?'<td class="c na">·</td>':`<td class="c" style="background:${hmColor(v)}" title="${r.n} · ${s}: ${sgn(v,0)} pp">${Math.round(v)===0?'0':sgn(v,0)}</td>`;}).join('')}<td class="g" style="color:${col(r.d)}">${sgn(r.gap)}</td></tr>`).join('')+
+    `</table></div><div class="hleg"><span>below prediction</span><i></i><span>above prediction</span><span style="margin-left:auto">· = not published by Eurostat</span></div></div>`;
+  h+=`<div class="dg2" style="margin-top:18px"><div class="card"><h4>Where shortfalls cluster</h4><div class="sub">Number of markets 5 pp or more below prediction in each sector.</div>${hbars(secMean.sort((a,b)=>b.v-a.v).map(x=>({...x,c:css('st')})),{lab:MOB()?96:120,valfmt:v=>v+(MOB()?'':' markets')})}</div>
+  <div class="card ins"><h4>Italy’s row is not flat</h4><p style="margin-bottom:12px">Largest shortfalls: ${itS.slice(0,3).map(([k,v])=>`${k} (${sgn(v)})`).join(', ')}. Smallest: ${itS.slice(-3).map(([k,v])=>`${k} (${sgn(v)})`).join(', ')}.</p><p>If industry mix explained the gap, Italy’s row would be one colour. Instead the shortfall is deepest in the most technology-intensive sectors, where adoption should be easiest: the signature of foundations built and left unused.</p></div></div>`;
+  $('p-hm').innerHTML=h;
+}
+/* ---------- Compare ---------- */
+function renderCmp(){
+  const opts=g=>[...M].sort((a,b)=>a.n.localeCompare(b.n)).map(m=>`<option value="${m.g}"${m.g===g?' selected':''}>${m.n}</option>`).join('');
+  const S=cmpSel.map(byG), C3=[css('cy'),'#F4B542','#B48CFF'];
+  let h=sh('Dashboard · compare','Compare markets side by side','Pick up to three markets. Every figure is from the same data used in the diagnosis.');
+  h+=`<div class="cmpsel">${S.map((r,i)=>`<span class="pick"><label for="cs${i}"><i class="swatch" style="background:${C3[i]}"></i>Market ${i+1}</label><select id="cs${i}" data-i="${i}">${opts(r.g)}</select></span>`).join('')}</div>`;
+  const row=(lab,f,sm)=>`<tr><td>${lab}${sm?`<small>${sm}</small>`:''}</td>${S.map(f).join('')}</tr>`;
+  h+=`<div class="card" style="overflow-x:auto"><table class="ct"><tr><th>Indicator</th>${S.map((r,i)=>`<th style="color:${C3[i]}">${r.n}</th>`).join('')}</tr>
+  ${row('AI adoption 2025',r=>`<td>${r.ai25.toFixed(1)}%<small>#${RAI[r.g]} of 27</small></td>`)}
+  ${row('AI adoption 2021',r=>`<td>${r.ai21.toFixed(1)}%</td>`)}
+  ${row('Change 2021 → 2025',r=>`<td>${sgn(r.ai25-r.ai21)} pp</td>`)}
+  ${row('Cloud adoption 2023',r=>`<td>${r.cl.toFixed(1)}%<small>#${RCL[r.g]} of 27</small></td>`)}
+  ${row('Predicted AI 2025',r=>`<td>${r.pred.toFixed(1)}%</td>`,'from the European line')}
+  ${row('Conversion gap, raw',r=>`<td style="color:${col(band(r.gap)==='mid'?'ontrend':band(r.gap))};font-weight:800">${sgn(r.gap)} pp<small>range ${fmt(r.lo)} to ${fmt(r.hi)}</small></td>`)}
+  ${row('Gap, industry-adjusted',r=>`<td>${sgn(r.comp)} pp</td>`)}
+  ${row('Gap, net of 2021',r=>`<td>${sgn(r.net)} pp</td>`)}
+  ${row('Diagnosis',r=>`<td>${pill(r.d)}${r.c?`<small>${r.c}</small>`:''}</td>`)}</table></div>`;
+  // sector grouped bars
+  const W=MOB()?400:560,rh=30,H=SECS.length*rh+20,lab=MOB()?104:128,vals=S.flatMap(r=>SECS.map(s=>r.sec[s]).filter(v=>v!==null)),lo=Math.min(0,...vals),hi=Math.max(0,...vals),span=(hi-lo)||1,aw=W-lab-36,x0=lab+(-lo/span)*aw,sc=aw/span;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img"><line x1="${x0}" x2="${x0}" y1="0" y2="${H-10}" stroke="${css('line')}"/>`;
+  SECS.forEach((sec,i)=>{const y=i*rh+4;s+=`<text x="${lab-8}" y="${y+16}" font-size="10.5" text-anchor="end" fill="${css('ink2')}">${SHORT[sec]}</text>`;
+    S.forEach((r,j)=>{const v=r.sec[sec];if(v===null)return;const bw=Math.abs(v)*sc;s+=`<rect x="${v<0?x0-bw:x0}" y="${y+3+j*8}" width="${Math.max(bw,1)}" height="7" rx="1.5" fill="${C3[j]}"><title>${r.n} · ${sec}: ${sgn(v,0)} pp</title></rect>`;});});
+  s+='</svg>';
+  const cls=['stalled','missing','converting','ontrend'].map(k=>{const g=M.filter(r=>r.d===k);return {k,n:g.length,ai:mean(g.map(r=>r.ai25)),cl:mean(g.map(r=>r.cl)),gap:mean(g.map(r=>r.gap)),ch:mean(g.map(r=>r.ai25-r.ai21))};});
+  h+=`<div class="dg2" style="margin-top:18px"><div class="card"><h4>Sector gaps compared</h4><div class="sub">Each sector against the same sector elsewhere (pp). Missing bar = not published.</div>${s}</div>
+  <div class="card"><h4>The four diagnoses compared</h4><div class="sub">Group averages across the 27 markets.</div><div style="overflow-x:auto"><table class="mt"><tr><th>Diagnosis</th><th>n</th><th>AI 2025</th><th>Cloud 2023</th><th>Gap</th><th>Δ AI since 2021</th></tr>
+  ${cls.map(c=>`<tr><td>${pill(c.k)}</td><td>${c.n}</td><td>${c.ai.toFixed(1)}%</td><td>${c.cl.toFixed(1)}%</td><td>${sgn(c.gap)}</td><td>${sgn(c.ch)}</td></tr>`).join('')}</table></div>
+  <div class="read" style="margin-top:16px"><b>Reading:</b> stalled and foundations-missing markets have similar AI adoption (${cls[0].ai.toFixed(1)}% vs ${cls[1].ai.toFixed(1)}%), but stalled markets hold far more cloud (${cls[0].cl.toFixed(1)}% vs ${cls[1].cl.toFixed(1)}%). The published adoption rate cannot tell them apart; the conversion gap can.</div></div></div>`;
+  $('p-cmp').innerHTML=h;
+}
+function renderDash(){
+  ['ov','hm','cmp'].forEach(k=>$('p-'+k).classList.toggle('hide',k!==dpage));
+  document.querySelectorAll('.sn').forEach(b=>b.classList.toggle('on',b.dataset.p===dpage));
+  ({ov:renderOv,hm:renderHm,cmp:renderCmp})[dpage]();
+}
+$('subnav').addEventListener('click',e=>{const b=e.target.closest('.sn');if(b){dpage=b.dataset.p;renderDash();window.scrollTo({top:0});}});
+$('v-dash').addEventListener('change',e=>{
+  if(e.target.matches('.cmpsel select')){cmpSel[+e.target.dataset.i]=e.target.value;renderCmp();}
+});
+$('v-dash').addEventListener('click',e=>{const t=e.target.closest('td.rn[data-g]');if(t)choose(t.dataset.g);});
+
+/* ===== landing ===== */
+const FEAT='IT'; let LG={};
+function buildLanding(){
+  const mob=innerWidth<700, W=mob?400:640,H=mob?300:420,ml=mob?34:44,mr=mob?10:18,mt=mob?14:96,mb=mob?38:40,x0=10,x1=85,y0=0,y1=46;
+  const sx=v=>ml+(v-x0)/(x1-x0)*(W-ml-mr), sy=v=>H-mb-(v-y0)/(y1-y0)*(H-mt-mb);
+  LG={H,mt,mb}; $('lsvg').setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const L=css('line'),MU=css('mu'),DI=css('dim'),CA=css('card');
+  let s='';
+  for(let v=0;v<=45;v+=15) s+=`<line x1="${ml}" x2="${W-mr}" y1="${sy(v)}" y2="${sy(v)}" stroke="${L}"/><text x="${ml-8}" y="${sy(v)+4}" fill="${DI}" font-size="11" text-anchor="end">${v}</text>`;
+  for(let v=20;v<=80;v+=20) s+=`<text x="${sx(v)}" y="${H-mb+18}" fill="${DI}" font-size="11" text-anchor="middle">${v}</text>`;
+  s+=`<text x="${(ml+W-mr)/2}" y="${H-4}" fill="${DI}" font-size="11" text-anchor="middle">Cloud adoption 2023 (%)</text><text transform="translate(12 ${(mt+H-mb)/2}) rotate(-90)" fill="${DI}" font-size="11" text-anchor="middle">AI adoption 2025 (%)</text>`;
+  s+=`<line id="lreg" pathLength="1" x1="${sx(x0)}" y1="${sy(A+B*x0)}" x2="${sx(x1)}" y2="${sy(A+B*x1)}" stroke="${MU}" stroke-width="1.6" stroke-dasharray="1 1" stroke-dashoffset="1"/>`;
+  const order=[...M].sort((a,b)=>a.cl-b.cl);
+  order.forEach((m,i)=>{ if(m.g===FEAT) return; s+=`<circle class="ld" data-i="${i}" cx="${sx(m.cl)}" cy="${sy(m.ai25)}" r="5.5" fill="${col(m.d)}" opacity="0"/>`; });
+  const f=M.find(x=>x.g===FEAT), px=sx(f.cl), py=sy(f.ai25), pp=sy(f.pred);
+  s+=`<line id="lgap" x1="${px}" x2="${px}" y1="${pp}" y2="${pp}" stroke="${col(f.d)}" stroke-width="3" stroke-linecap="round" style="filter:drop-shadow(0 0 6px ${col(f.d)})"/>`;
+  s+=`<circle id="lpred" cx="${px}" cy="${pp}" r="5" fill="${CA}" stroke="${MU}" stroke-width="1.6" opacity="0"/>`;
+  s+=`<circle id="lobs" cx="${px}" cy="${pp}" r="9" fill="${col(f.d)}" stroke="${CA}" stroke-width="3" opacity="0"/>`;
+  s+=`<text id="llab" x="${px+16}" y="${py+5}" fill="${css('ink')}" font-size="13" font-weight="700" opacity="0" style="paint-order:stroke;stroke:${CA};stroke-width:5px">${f.n}</text>`;
+  $('lsvg').innerHTML=s; $('gname').textContent=f.n+' · '+NAME[f.d];
+  const cnt=k=>M.filter(r=>r.d===k).length;
+  const D=[['stalled','Capability under-used','Cloud is in place, but AI adoption lags well behind what it implies.'],
+    ['missing','Build first','Cloud adoption is well below the EU mean; foundations come before AI.'],
+    ['converting','Ahead of the line','Converts more capability into AI use than the European pattern suggests.'],
+    ['ontrend','In line','Adoption matches capability; gains depend on raising capability.']];
+  $('lcls').innerHTML=D.map(([k,t,p])=>`<div class="lc" style="--c:${cvar(k)}"><div class="k">${NAME[k]}</div><h4>${t}</h4><p>${p}</p><div class="cnt">${cnt(k)} of 27 markets</div></div>`).join('');
+  landingScroll();
+}
+function landingScroll(){
+  if($('landing').classList.contains('hide')) return;
+  $('lnav').classList.toggle('solid',scrollY>40);
+  const sc=$('how'), r=sc.getBoundingClientRect();
+  const p=clamp(-r.top/(sc.offsetHeight-innerHeight),0,1), n=27;
+  document.querySelectorAll('.ld').forEach(c=>{const i=+c.dataset.i, o=clamp((p-.02-i*.008)/.04,0,1); c.setAttribute('opacity',(p>.5?.35+.65*(1-clamp((p-.5)/.08,0,1)):1)*o);});
+  $('lreg').setAttribute('stroke-dashoffset',1-clamp((p-.26)/.2,0,1));
+  const f=M.find(x=>x.g===FEAT), q=clamp((p-.5)/.3,0,1), y2=+$('lgap').getAttribute('y1');
+  const pp=y2, {H,mt,mb}=LG, py=H-mb-(f.ai25/46)*(H-mt-mb);
+  $('lgap').setAttribute('y2',pp+(py-pp)*q); $('lgap').setAttribute('opacity',q>0?1:0);
+  $('lpred').setAttribute('opacity',clamp((p-.46)/.04,0,1));
+  $('lobs').setAttribute('cy',pp+(py-pp)*q); $('lobs').setAttribute('opacity',clamp((p-.48)/.03,0,1));
+  $('llab').setAttribute('opacity',q>.95?1:0);
+  $('gnum').textContent=sgn(f.gap*q)+' pp'; $('gnum').parentElement.style.opacity=clamp((p-.46)/.05,0,1);
+  const step=p<.25?0:p<.5?1:p<.85?2:3;
+  document.querySelectorAll('.sstep').forEach(e=>e.classList.toggle('on',+e.dataset.i===step));
+  $('sbar').style.width=(p*100)+'%';
+  const e=$('fillwm').getBoundingClientRect(), fp=clamp((innerHeight-e.top)/(innerHeight*.7),0,1);
+  $('fillwm').style.setProperty('--f',(fp*100)+'%');
+}
+function enterApp(){
+  const l=$('landing'); l.classList.add('fadeout');
+  setTimeout(()=>{l.classList.add('hide');l.classList.remove('fadeout');const a=$('app');a.classList.remove('hide');a.classList.add('fadein');window.scrollTo({top:0});renderList();setView('dash');},420);
+}
+function enterLanding(){
+  const a=$('app'); a.classList.add('hide'); a.classList.remove('fadein');
+  const l=$('landing'); l.classList.remove('hide'); l.classList.add('fadein'); window.scrollTo({top:0}); landingScroll();
+}
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',enterApp));
+$('howbtn').addEventListener('click',()=>{window.scrollTo({top:$('how').offsetTop+innerHeight*.2,behavior:'smooth'});});
+document.querySelector('.top .brand').addEventListener('click',enterLanding);
+addEventListener('scroll',()=>requestAnimationFrame(landingScroll),{passive:true});
+let lastMob=innerWidth<700;addEventListener('resize',()=>{landingScroll();const m=innerWidth<700;if(m!==lastMob){lastMob=m;buildLanding();if(!$('app').classList.contains('hide')&&view==='diag')renderDiag();if(!$('app').classList.contains('hide')&&view==='dash')renderDash();}});
+buildLanding();
+</script>
+</body>
+</html>
